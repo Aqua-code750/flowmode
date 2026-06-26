@@ -1,0 +1,156 @@
+package com.example.flowmode
+
+import android.os.Bundle
+import android.view.Window
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shop
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.flowmode.data.model.ActionType
+import com.example.flowmode.data.model.TriggerType
+import com.example.flowmode.ui.FlowNavigation
+import com.example.flowmode.ui.Screen
+import com.example.flowmode.ui.auth.AuthViewModel
+import com.example.flowmode.ui.canvas.CanvasViewModel
+import com.example.flowmode.ui.marketplace.MarketplaceViewModel
+import com.example.flowmode.ui.theme.FlowModeTheme
+import com.example.flowmode.util.PermissionHandler
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Full screen edge-to-edge experience
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        // Request basic permissions on startup
+        if (!PermissionHandler.hasBasicPermissions(this)) {
+            PermissionHandler.requestBasicPermissions(this)
+        }
+
+        setContent {
+            FlowModeTheme {
+                MainApp()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainApp() {
+    val navController = rememberNavController()
+    val authViewModel: AuthViewModel = viewModel()
+    val canvasViewModel: CanvasViewModel = viewModel()
+    val marketplaceViewModel: MarketplaceViewModel = viewModel()
+    
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val showBottomBar = authViewModel.user.value != null && currentRoute != Screen.Auth.route
+    var showNodePicker by remember { mutableStateOf(false) }
+
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar {
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.List, contentDescription = null) },
+                        label = { Text("Flows") },
+                        selected = currentRoute == Screen.FlowList.route,
+                        onClick = { navController.navigate(Screen.FlowList.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                        label = { Text("Editor") },
+                        selected = currentRoute == Screen.FlowEditor.route,
+                        onClick = { navController.navigate(Screen.FlowEditor.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Shop, contentDescription = null) },
+                        label = { Text("Market") },
+                        selected = currentRoute == Screen.Marketplace.route,
+                        onClick = { navController.navigate(Screen.Marketplace.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                        label = { Text("Settings") },
+                        selected = currentRoute == Screen.Settings.route,
+                        onClick = { navController.navigate(Screen.Settings.route) }
+                    )
+                }
+            }
+        },
+        floatingActionButton = {
+            if (currentRoute == Screen.FlowEditor.route) {
+                FloatingActionButton(onClick = { showNodePicker = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Node")
+                }
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            FlowNavigation(
+                navController = navController,
+                authViewModel = authViewModel,
+                canvasViewModel = canvasViewModel,
+                marketplaceViewModel = marketplaceViewModel
+            )
+
+            if (showNodePicker) {
+                AlertDialog(
+                    onDismissRequest = { showNodePicker = false },
+                    title = { Text("Add Node") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Defaults", style = MaterialTheme.typography.titleMedium)
+                            Button(onClick = { canvasViewModel.addTrigger(TriggerType.PHONE_UNLOCK); showNodePicker = false }) {
+                                Text("Trigger: Phone Unlock")
+                            }
+                            Button(onClick = { canvasViewModel.addAction(ActionType.NOTIFICATION); showNodePicker = false }) {
+                                Text("Action: Notification")
+                            }
+                            
+                            if (marketplaceViewModel.unlockedNodes.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Unlocked Nodes", style = MaterialTheme.typography.titleMedium)
+                                marketplaceViewModel.unlockedNodes.forEach { node ->
+                                    Button(onClick = { canvasViewModel.addGeneratedNode(node); showNodePicker = false }) {
+                                        Text("Node: ${node.name}")
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showNodePicker = false }) { Text("Close") }
+                    }
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(authViewModel.user.value) {
+        if (authViewModel.user.value == null) {
+            navController.navigate(Screen.Auth.route) {
+                popUpTo(0)
+            }
+        } else if (currentRoute == Screen.Auth.route) {
+            navController.navigate(Screen.FlowList.route) {
+                popUpTo(Screen.Auth.route) { inclusive = true }
+            }
+        }
+    }
+}

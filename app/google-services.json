@@ -1,0 +1,34 @@
+{
+  "project_info": {
+    "project_number": "606836149753",
+    "project_id": "fir-fb9da",
+    "storage_bucket": "fir-fb9da.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:606836149753:android:9b5b1246800bc810528128",
+        "android_client_info": {
+          "package_name": "com.example.flowmode"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "606836149753-5okjd2bfafvggm2fdvp7v7ncs541c33o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5ITpCu4jXlGWi0HEsJE-BygkRR-FGbHo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
