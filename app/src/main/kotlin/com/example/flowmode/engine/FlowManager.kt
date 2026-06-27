@@ -50,6 +50,15 @@ class FlowManager(private val context: Context) {
             ActionType.TOGGLE_WIFI -> FlowActions.toggleWifi(context, action.config)
             ActionType.SET_BRIGHTNESS -> FlowActions.setBrightness(context, action.config)
             ActionType.TOGGLE_FLASHLIGHT -> FlowActions.toggleFlashlight(context, action.config)
+            ActionType.OPEN_APP -> FlowActions.openApp(context, action.config)
+            ActionType.LOG_EVENT -> FlowActions.logEvent(action.config)
+            ActionType.PLAY_SOUND -> FlowActions.playSound(context)
+            ActionType.VIBRATE -> FlowActions.vibrate(context, action.config)
+            ActionType.SPEAK_TEXT -> FlowActions.speakText(context, action.config)
+            ActionType.TOGGLE_BLUETOOTH -> FlowActions.toggleBluetooth(context, action.config)
+            ActionType.SEND_SMS -> FlowActions.sendSms(action.config)
+            ActionType.WAIT_DELAY -> FlowActions.waitDelay(action.config)
+            else -> Log.w("FlowManager", "Action type ${action.type} not yet implemented")
         }
     }
 }

@@ -6,15 +6,28 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraManager
+import android.media.RingtoneManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.flowmode.MainActivity
+import java.util.Locale
+import android.bluetooth.BluetoothManager
+import android.telephony.SmsManager
 
 object FlowActions {
 
     private const val CHANNEL_ID = "flow_notifications"
+    private var tts: TextToSpeech? = null
 
     fun showNotification(context: Context, config: Map<String, Any>) {
         val title = config["title"] as? String ?: "FlowMode"
@@ -53,8 +66,6 @@ object FlowActions {
                     NotificationManager.INTERRUPTION_FILTER_ALL
                 }
                 notificationManager.setInterruptionFilter(filter)
-            } else {
-                // Should prompt for permission in UI
             }
         }
     }
@@ -62,10 +73,6 @@ object FlowActions {
     fun toggleWifi(context: Context, config: Map<String, Any>) {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val enable = config["enable"] as? Boolean ?: true
-        // Note: setWifiEnabled is deprecated for apps targeting API 29+ except for system apps
-        // but we'll try for now or use the suggestion if it's a legacy requirement.
-        // For Android 10+, we should use Settings Panel or similar, but for automation
-        // it's tricky. Let's stick to the basic for now.
         @Suppress("DEPRECATION")
         wifiManager.isWifiEnabled = enable
     }
@@ -85,6 +92,100 @@ object FlowActions {
             val cameraId = cameraManager.cameraIdList[0]
             val enable = config["enable"] as? Boolean ?: true
             cameraManager.setTorchMode(cameraId, enable)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun openApp(context: Context, config: Map<String, Any>) {
+        val packageName = config["packageName"] as? String ?: return
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+        launchIntent?.let {
+            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(it)
+        }
+    }
+
+    fun logEvent(config: Map<String, Any>) {
+        val message = config["message"] as? String ?: "Event Logged"
+        Log.i("FlowEvent", message)
+    }
+
+    fun playSound(context: Context) {
+        try {
+            val notification: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val r = RingtoneManager.getRingtone(context, notification)
+            r.play()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun vibrate(context: Context, config: Map<String, Any>) {
+        val duration = (config["duration"] as? Number)?.toLong() ?: 500L
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(duration)
+        }
+    }
+
+    fun speakText(context: Context, config: Map<String, Any>) {
+        val text = config["text"] as? String ?: "Hello from FlowMode"
+        if (tts == null) {
+            tts = TextToSpeech(context) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    tts?.language = Locale.US
+                    tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+                }
+            }
+        } else {
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        }
+    }
+
+    fun toggleBluetooth(context: Context, config: Map<String, Any>) {
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val adapter = bluetoothManager.adapter
+        val enable = config["enable"] as? Boolean ?: true
+        if (enable) {
+            @Suppress("DEPRECATION")
+            adapter?.enable()
+        } else {
+            @Suppress("DEPRECATION")
+            adapter?.disable()
+        }
+    }
+
+    fun sendSms(config: Map<String, Any>) {
+        val phoneNumber = config["phoneNumber"] as? String ?: return
+        val message = config["message"] as? String ?: return
+        try {
+            val smsManager: SmsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                SmsManager.getSmsManagerForSubscriptionId(SmsManager.getDefaultSmsSubscriptionId())
+            } else {
+                @Suppress("DEPRECATION")
+                SmsManager.getDefault()
+            }
+            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun waitDelay(config: Map<String, Any>) {
+        val seconds = (config["seconds"] as? Number)?.toLong() ?: 1L
+        try {
+            Thread.sleep(seconds * 1000)
         } catch (e: Exception) {
             e.printStackTrace()
         }

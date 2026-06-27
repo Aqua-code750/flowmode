@@ -5,8 +5,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,13 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.flowmode.ui.theme.FlowTheme
+import com.example.flowmode.data.model.*
 import kotlin.math.roundToInt
 
 import androidx.compose.ui.tooling.preview.Preview
@@ -97,6 +103,23 @@ fun FlowCanvasContent(
             .fillMaxSize()
             .background(canvasBg)
     ) {
+        // Draw Grid Background
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val gridSize = 32.dp.toPx()
+            val dotSize = 1.dp.toPx()
+            val gridColor = wireColor.copy(alpha = 0.05f)
+            
+            for (x in 0..(size.width / gridSize).toInt()) {
+                for (y in 0..(size.height / gridSize).toInt()) {
+                    drawCircle(
+                        color = gridColor,
+                        radius = dotSize,
+                        center = Offset(x * gridSize, y * gridSize)
+                    )
+                }
+            }
+        }
+
         // Draw Wires
         Canvas(modifier = Modifier.fillMaxSize()) {
             wires.forEach { wire ->
@@ -104,18 +127,24 @@ fun FlowCanvasContent(
                 val toNode = nodes.find { it.id == wire.toId }
 
                 if (fromNode != null && toNode != null) {
-                    val start = fromNode.position + Offset(nodeWidthPx, nodeHeightPx / 2)
-                    val end = toNode.position + Offset(0f, nodeHeightPx / 2)
+                    val start = fromNode.position + Offset(200.dp.toPx(), 60.dp.toPx()) // Updated for new node size
+                    val end = toNode.position + Offset(0f, 60.dp.toPx())
 
                     val path = Path().apply {
                         moveTo(start.x, start.y)
+                        val deltaX = Math.abs(end.x - start.x)
+                        val controlX = deltaX / 2f
                         cubicTo(
-                            start.x + 80f, start.y,
-                            end.x - 80f, end.y,
+                            start.x + controlX, start.y,
+                            end.x - controlX, end.y,
                             end.x, end.y
                         )
                     }
-                    drawPath(path, color = wireColor.copy(alpha = 0.6f), style = Stroke(width = 3f))
+                    drawPath(
+                        path = path, 
+                        color = wireColor, 
+                        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                    )
                 }
             }
         }
@@ -237,50 +266,24 @@ fun NodeComposable(
 ) {
     val colors = FlowTheme.colors
     val accentColor = if (node.type == NodeType.TRIGGER) colors.trigger else colors.action
-    val borderColor = if (isConnecting) Color.Yellow else accentColor.copy(alpha = 0.5f)
+    val isSelected = false // Could be passed in
+    val borderColor = if (isConnecting) accentColor else if (isSelected) accentColor else colors.nodeBorder
 
     val animatedOffset by animateOffsetAsState(
         targetValue = node.position,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 300f),
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
         label = "NodeOffset"
     )
 
     Box(
         modifier = Modifier
             .offset { IntOffset(animatedOffset.x.roundToInt(), animatedOffset.y.roundToInt()) }
-            .zIndex(1f)
+            .zIndex(if (isConnecting) 2f else 1f)
     ) {
-        // Output Port (right)
-        Surface(
-            modifier = Modifier
-                .size(14.dp)
-                .align(Alignment.CenterEnd)
-                .offset(x = 7.dp)
-                .clickable { onConnectClick() }
-                .zIndex(2f),
-            shape = CircleShape,
-            color = Color.White,
-            border = BorderStroke(2.dp, accentColor)
-        ) {}
-
-        // Input Port (left) - only for Actions
-        if (node.type == NodeType.ACTION) {
-            Surface(
-                modifier = Modifier
-                    .size(14.dp)
-                    .align(Alignment.CenterStart)
-                    .offset(x = (-7).dp)
-                    .zIndex(2f),
-                shape = CircleShape,
-                color = Color.White,
-                border = BorderStroke(2.dp, accentColor)
-            ) {}
-        }
-
         Card(
             modifier = Modifier
-                .width(180.dp)
-                .height(80.dp)
+                .width(200.dp)
+                .wrapContentHeight()
                 .pointerInput(node.id) {
                     detectDragGestures { change, dragAmount ->
                         change.consume()
@@ -288,50 +291,110 @@ fun NodeComposable(
                     }
                 }
                 .clickable { onNodeClick() },
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.5.dp, borderColor)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isConnecting) 12.dp else 4.dp),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(if (isConnecting) 2.dp else 1.dp, borderColor)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(44.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = accentColor.copy(alpha = 0.1f)
+            Column {
+                // Node Header (Professional Darker Look)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colors.nodeHeader)
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (node.type == NodeType.TRIGGER) Icons.Default.Bolt else Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.padding(10.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(accentColor.copy(alpha = 0.15f), RoundedCornerShape(6.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = when(node.name) {
+                                "Notification" -> Icons.Default.Notifications
+                                "WiFi", "WiFi Connect", "WiFi Disconnect" -> Icons.Default.Wifi
+                                "DND" -> Icons.Default.DoNotDisturb
+                                "Brightness" -> Icons.Default.Brightness6
+                                "Flashlight" -> Icons.Default.FlashlightOn
+                                "Battery Low", "Battery Full" -> Icons.Default.BatteryChargingFull
+                                "Phone Unlock" -> Icons.Default.LockOpen
+                                "Screen Off" -> Icons.Default.ScreenLockPortrait
+                                "Headphones Plugged" -> Icons.Default.Headset
+                                "Open App" -> Icons.Default.Launch
+                                "Log Event" -> Icons.Default.List
+                                "Send SMS" -> Icons.Default.Sms
+                                "Wait Delay" -> Icons.Default.Timer
+                                "Speak Text" -> Icons.Default.RecordVoiceOver
+                                "Play Sound" -> Icons.Default.VolumeUp
+                                "Vibrate" -> Icons.Default.Vibration
+                                "Bluetooth" -> Icons.Default.Bluetooth
+                                else -> if (node.type == NodeType.TRIGGER) Icons.Default.Bolt else Icons.Default.PlayArrow
+                            },
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = node.name,
-                        color = Color.Black,
-                        style = MaterialTheme.typography.titleSmall,
+                        text = node.name.uppercase(),
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            letterSpacing = 0.5.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                         maxLines = 1
                     )
-                    Text(
-                        text = if (node.type == NodeType.TRIGGER) "Trigger" else "Action",
-                        color = accentColor.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(onClick = onConfigClick, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                    }
                 }
 
-                IconButton(onClick = onConfigClick, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color.LightGray)
+                Divider(color = colors.nodeBorder.copy(alpha = 0.5f), thickness = 1.dp)
+
+                // Node Body (Status/Brief Info)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = if (node.type == NodeType.TRIGGER) "EVENT TRIGGER" else "ACTION BLOCK",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Medium,
+                            color = accentColor.copy(alpha = 0.7f)
+                        )
+                    )
                 }
             }
+        }
+
+        // Output Port
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .align(Alignment.CenterEnd)
+                .offset(x = 6.dp)
+                .background(Color.White, CircleShape)
+                .border(BorderStroke(2.dp, accentColor), CircleShape)
+                .clickable { onConnectClick() }
+                .zIndex(3f)
+        )
+
+        // Input Port
+        if (node.type == NodeType.ACTION) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .align(Alignment.CenterStart)
+                    .offset(x = (-6).dp)
+                    .background(Color.White, CircleShape)
+                    .border(BorderStroke(2.dp, accentColor), CircleShape)
+                    .zIndex(3f)
+            )
         }
     }
 }

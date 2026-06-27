@@ -27,7 +27,9 @@ data class FlowColors(
     val trigger: Color = TriggerColor,
     val action: Color = ActionColor,
     val canvasBackground: Color = CanvasBackground,
-    val wire: Color = WireColor
+    val wire: Color = WireColor,
+    val nodeBorder: Color = NodeBorderColor,
+    val nodeHeader: Color = NodeHeaderBg
 )
 
 val LocalFlowColors = staticCompositionLocalOf { FlowColors() }
@@ -87,7 +89,9 @@ fun FlowModeTheme(
         trigger = TriggerColor,
         action = ActionColor,
         canvasBackground = if (darkTheme) BackgroundDark else BackgroundLight,
-        wire = if (darkTheme) Color.White else Color.Black
+        wire = if (darkTheme) WireColor else WireColor,
+        nodeBorder = if (darkTheme) Color(0xFF303438) else NodeBorderColor,
+        nodeHeader = if (darkTheme) Color(0xFF25282C) else NodeHeaderBg
     )) {
         MaterialTheme(
             colorScheme = colorScheme,

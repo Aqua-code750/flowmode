@@ -39,13 +39,43 @@ class FlowBroadcastReceiver : BroadcastReceiver() {
                 Log.d("FlowReceiver", "Battery low")
                 flowManager.handleTrigger(TriggerType.BATTERY_LOW)
             }
+            Intent.ACTION_BATTERY_OKAY -> {
+                Log.d("FlowReceiver", "Battery full/okay")
+                flowManager.handleTrigger(TriggerType.BATTERY_FULL)
+            }
+            Intent.ACTION_SCREEN_OFF -> {
+                Log.d("FlowReceiver", "Screen off")
+                flowManager.handleTrigger(TriggerType.SCREEN_OFF)
+            }
+            Intent.ACTION_HEADSET_PLUG -> {
+                val state = intent.getIntExtra("state", -1)
+                if (state == 1) {
+                    Log.d("FlowReceiver", "Headphones plugged")
+                    flowManager.handleTrigger(TriggerType.HEADPHONES_PLUGGED)
+                }
+            }
+            "android.provider.Telephony.SMS_RECEIVED" -> {
+                Log.d("FlowReceiver", "SMS Received")
+                flowManager.handleTrigger(TriggerType.SMS_RECEIVED)
+            }
+            android.telephony.TelephonyManager.ACTION_PHONE_STATE_CHANGED -> {
+                val state = intent.getStringExtra(android.telephony.TelephonyManager.EXTRA_STATE)
+                if (state == android.telephony.TelephonyManager.EXTRA_STATE_RINGING) {
+                    val incomingNumber = intent.getStringExtra(android.telephony.TelephonyManager.EXTRA_INCOMING_NUMBER)
+                    Log.d("FlowReceiver", "Incoming call from: $incomingNumber")
+                    flowManager.handleTrigger(TriggerType.INCOMING_CALL, mapOf("number" to (incomingNumber ?: "")))
+                }
+            }
             WifiManager.NETWORK_STATE_CHANGED_ACTION -> {
                 val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
                 if (info?.isConnected == true) {
                     val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                    val ssid = wifiManager.connectionInfo.ssid
+                    val ssid = wifiManager.connectionInfo.ssid.replace("\"", "")
                     Log.d("FlowReceiver", "WiFi connected: $ssid")
                     flowManager.handleTrigger(TriggerType.WIFI_CONNECT, mapOf("ssid" to ssid))
+                } else if (info?.isConnected == false) {
+                    Log.d("FlowReceiver", "WiFi disconnected")
+                    flowManager.handleTrigger(TriggerType.WIFI_DISCONNECT)
                 }
             }
         }
