@@ -93,8 +93,8 @@ fun FlowCanvasContent(
     var showNodeLibrary by remember { mutableStateOf(false) }
     
     val density = LocalDensity.current
-    val nodeWidthPx = with(density) { 180.dp.toPx() }
-    val nodeHeightPx = with(density) { 80.dp.toPx() } // Adjusted for n8n style
+    val nodeWidthPx = with(density) { 160.dp.toPx() } // n8n nodes are more compact
+    val nodeHeightPx = with(density) { 60.dp.toPx() } 
     val canvasBg = FlowTheme.colors.canvasBackground
     val wireColor = FlowTheme.colors.wire
 
@@ -127,8 +127,8 @@ fun FlowCanvasContent(
                 val toNode = nodes.find { it.id == wire.toId }
 
                 if (fromNode != null && toNode != null) {
-                    val start = fromNode.position + Offset(200.dp.toPx(), 60.dp.toPx()) // Updated for new node size
-                    val end = toNode.position + Offset(0f, 60.dp.toPx())
+                    val start = fromNode.position + Offset(160.dp.toPx(), 30.dp.toPx()) // Centered on smaller height
+                    val end = toNode.position + Offset(0f, 30.dp.toPx())
 
                     val path = Path().apply {
                         moveTo(start.x, start.y)
@@ -266,7 +266,7 @@ fun NodeComposable(
 ) {
     val colors = FlowTheme.colors
     val accentColor = if (node.type == NodeType.TRIGGER) colors.trigger else colors.action
-    val isSelected = false // Could be passed in
+    val isSelected = false 
     val borderColor = if (isConnecting) accentColor else if (isSelected) accentColor else colors.nodeBorder
 
     val animatedOffset by animateOffsetAsState(
@@ -282,7 +282,7 @@ fun NodeComposable(
     ) {
         Card(
             modifier = Modifier
-                .width(200.dp)
+                .width(160.dp) // Narrower n8n width
                 .wrapContentHeight()
                 .pointerInput(node.id) {
                     detectDragGestures { change, dragAmount ->
@@ -292,105 +292,96 @@ fun NodeComposable(
                 }
                 .clickable { onNodeClick() },
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = if (isConnecting) 12.dp else 4.dp),
-            shape = RoundedCornerShape(10.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isConnecting) 8.dp else 2.dp),
+            shape = RoundedCornerShape(8.dp),
             border = BorderStroke(if (isConnecting) 2.dp else 1.dp, borderColor)
         ) {
-            Column {
-                // Node Header (Professional Darker Look)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colors.nodeHeader)
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .background(accentColor.copy(alpha = 0.15f), RoundedCornerShape(6.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = when(node.name) {
-                                "Notification" -> Icons.Default.Notifications
-                                "WiFi", "WiFi Connect", "WiFi Disconnect" -> Icons.Default.Wifi
-                                "DND" -> Icons.Default.DoNotDisturb
-                                "Brightness" -> Icons.Default.Brightness6
-                                "Flashlight" -> Icons.Default.FlashlightOn
-                                "Battery Low", "Battery Full" -> Icons.Default.BatteryChargingFull
-                                "Phone Unlock" -> Icons.Default.LockOpen
-                                "Screen Off" -> Icons.Default.ScreenLockPortrait
-                                "Headphones Plugged" -> Icons.Default.Headset
-                                "Open App" -> Icons.Default.Launch
-                                "Log Event" -> Icons.Default.List
-                                "Send SMS" -> Icons.Default.Sms
-                                "Wait Delay" -> Icons.Default.Timer
-                                "Speak Text" -> Icons.Default.RecordVoiceOver
-                                "Play Sound" -> Icons.Default.VolumeUp
-                                "Vibrate" -> Icons.Default.Vibration
-                                "Bluetooth" -> Icons.Default.Bluetooth
-                                else -> if (node.type == NodeType.TRIGGER) Icons.Default.Bolt else Icons.Default.PlayArrow
-                            },
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = node.name.uppercase(),
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            letterSpacing = 0.5.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                        maxLines = 1
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = onConfigClick, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
-                    }
-                }
-
-                Divider(color = colors.nodeBorder.copy(alpha = 0.5f), thickness = 1.dp)
-
-                // Node Body (Status/Brief Info)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // n8n style icon box
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+                        .size(32.dp)
+                        .background(accentColor, RoundedCornerShape(6.dp)),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Icon(
+                        imageVector = when(node.name) {
+                            "Notification" -> Icons.Default.Notifications
+                            "WiFi", "WiFi Connect", "WiFi Disconnect" -> Icons.Default.Wifi
+                            "DND" -> Icons.Default.DoNotDisturb
+                            "Brightness" -> Icons.Default.Brightness6
+                            "Flashlight" -> Icons.Default.FlashlightOn
+                            "Battery Low", "Battery Full" -> Icons.Default.BatteryChargingFull
+                            "Phone Unlock" -> Icons.Default.LockOpen
+                            "Screen Off" -> Icons.Default.ScreenLockPortrait
+                            "Headphones Plugged" -> Icons.Default.Headset
+                            "Open App" -> Icons.Default.Launch
+                            "Log Event" -> Icons.Default.List
+                            "Send SMS" -> Icons.Default.Sms
+                            "Wait Delay" -> Icons.Default.Timer
+                            "Speak Text" -> Icons.Default.RecordVoiceOver
+                            "Play Sound" -> Icons.Default.VolumeUp
+                            "Vibrate" -> Icons.Default.Vibration
+                            "Bluetooth" -> Icons.Default.Bluetooth
+                            else -> if (node.type == NodeType.TRIGGER) Icons.Default.Bolt else Icons.Default.PlayArrow
+                        },
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(10.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (node.type == NodeType.TRIGGER) "EVENT TRIGGER" else "ACTION BLOCK",
+                        text = node.name,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = if (node.type == NodeType.TRIGGER) "Trigger" else "Action",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            fontWeight = FontWeight.Medium,
-                            color = accentColor.copy(alpha = 0.7f)
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     )
+                }
+
+                IconButton(onClick = onConfigClick, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color.Gray.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
                 }
             }
         }
 
-        // Output Port
+        // Output Port (Small circle on the right)
         Box(
             modifier = Modifier
-                .size(12.dp)
+                .size(10.dp)
                 .align(Alignment.CenterEnd)
-                .offset(x = 6.dp)
+                .offset(x = 5.dp)
                 .background(Color.White, CircleShape)
                 .border(BorderStroke(2.dp, accentColor), CircleShape)
                 .clickable { onConnectClick() }
                 .zIndex(3f)
         )
 
-        // Input Port
+        // Input Port (Small circle on the left)
         if (node.type == NodeType.ACTION) {
             Box(
                 modifier = Modifier
-                    .size(12.dp)
+                    .size(10.dp)
                     .align(Alignment.CenterStart)
-                    .offset(x = (-6).dp)
+                    .offset(x = (-5).dp)
                     .background(Color.White, CircleShape)
                     .border(BorderStroke(2.dp, accentColor), CircleShape)
                     .zIndex(3f)

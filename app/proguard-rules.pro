@@ -1,25 +1,22 @@
-# Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in C:\Users\kavs1\AppData\Local\Android\Sdk/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.kts.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools-proguard.html
+# FlowMode ProGuard Rules
 
-# Add any project specific keep rules here:
+# General Android rules
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+-keepattributes Signature
+-keepattributes InnerClasses
+-keepattributes *Annotation*
+-keepattributes EnclosingMethod
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep Firebase and GMS classes
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Keep your data models (important for Firestore serialization)
+-keep class com.example.flowmode.data.model.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Obfuscate everything else
+-dontwarn com.example.flowmode.**
+-keep class com.example.flowmode.ui.** { *; }
+# Note: You can fine-tune this to obfuscate more UI logic if needed,
+# but keeping UI classes often prevents layout inflation issues.

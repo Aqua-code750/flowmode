@@ -18,8 +18,8 @@ android {
         applicationId = "com.example.flowmode"
         minSdk = 23
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -33,6 +33,9 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("debug") 
+        }
+        debug {
+            isMinifyEnabled = false
         }
     }
     lint {
@@ -73,6 +76,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.navigation:navigation-compose:2.7.5")
+    
+    // Security
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
