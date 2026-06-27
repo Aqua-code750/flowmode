@@ -5,6 +5,8 @@ import android.view.Window
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.List
@@ -62,6 +64,8 @@ fun MainApp() {
     val showBottomBar = authViewModel.user.value != null && currentRoute != Screen.Auth.route
     var showNodePicker by remember { mutableStateOf(false) }
 
+    fun String.capitalizeCustom() = this.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
@@ -114,22 +118,39 @@ fun MainApp() {
                     onDismissRequest = { showNodePicker = false },
                     title = { Text("Add Node") },
                     text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Defaults", style = MaterialTheme.typography.titleMedium)
-                            Button(onClick = { canvasViewModel.addTrigger(TriggerType.PHONE_UNLOCK); showNodePicker = false }) {
-                                Text("Trigger: Phone Unlock")
-                            }
-                            Button(onClick = { canvasViewModel.addAction(ActionType.NOTIFICATION); showNodePicker = false }) {
-                                Text("Action: Notification")
+                        Column(
+                            modifier = Modifier
+                                .heightIn(max = 400.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text("Triggers", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                            TriggerType.entries.forEach { type ->
+                                Button(
+                                    onClick = { 
+                                        canvasViewModel.addTrigger(type)
+                                        showNodePicker = false 
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                                ) {
+                                    Text(type.name.replace("_", " ").capitalizeCustom())
+                                }
                             }
                             
-                            if (marketplaceViewModel.unlockedNodes.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Unlocked Nodes", style = MaterialTheme.typography.titleMedium)
-                                marketplaceViewModel.unlockedNodes.forEach { node ->
-                                    Button(onClick = { canvasViewModel.addGeneratedNode(node); showNodePicker = false }) {
-                                        Text("Node: ${node.name}")
-                                    }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            Text("Actions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary)
+                            ActionType.entries.forEach { type ->
+                                Button(
+                                    onClick = { 
+                                        canvasViewModel.addAction(type)
+                                        showNodePicker = false 
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                                ) {
+                                    Text(type.name.replace("_", " ").capitalizeCustom())
                                 }
                             }
                         }
