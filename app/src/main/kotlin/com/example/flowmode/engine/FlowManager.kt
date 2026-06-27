@@ -58,6 +58,8 @@ class FlowManager(private val context: Context) {
             ActionType.TOGGLE_BLUETOOTH -> FlowActions.toggleBluetooth(context, action.config)
             ActionType.SEND_SMS -> FlowActions.sendSms(action.config)
             ActionType.WAIT_DELAY -> FlowActions.waitDelay(action.config)
+            ActionType.HTTP_REQUEST -> FlowActions.makeHttpRequest(action.config)
+            ActionType.SCREENSHOT -> FlowActions.takeScreenshot(context)
             else -> Log.w("FlowManager", "Action type ${action.type} not yet implemented")
         }
     }

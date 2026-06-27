@@ -23,6 +23,19 @@ import com.example.flowmode.MainActivity
 import java.util.Locale
 import android.bluetooth.BluetoothManager
 import android.telephony.SmsManager
+import java.net.HttpURLConnection
+import java.net.URL
+import android.graphics.Bitmap
+import android.os.Environment
+import android.view.View
+import android.app.Activity
+import java.io.FileOutputStream
+import java.io.File
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.example.flowmode.engine.FlowWorker
+import java.util.concurrent.TimeUnit
 
 object FlowActions {
 
@@ -189,5 +202,28 @@ object FlowActions {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    fun makeHttpRequest(config: Map<String, Any>) {
+        val urlString = config["url"] as? String ?: return
+        val method = config["method"] as? String ?: "GET"
+        
+        Thread {
+            try {
+                val url = URL(urlString)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = method
+                val responseCode = connection.responseCode
+                Log.d("FlowActions", "HTTP $method to $urlString returned $responseCode")
+            } catch (e: Exception) {
+                Log.e("FlowActions", "HTTP Request failed", e)
+            }
+        }.start()
+    }
+
+    fun takeScreenshot(context: Context) {
+        // Note: Real screenshots usually require MediaProjection or root on Android.
+        // This is a simplified "log" version for the automation flow.
+        Log.i("FlowActions", "Screenshot action triggered (Requires System Permissions)")
     }
 }

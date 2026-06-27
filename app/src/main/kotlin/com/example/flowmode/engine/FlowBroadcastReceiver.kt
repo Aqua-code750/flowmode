@@ -66,6 +66,14 @@ class FlowBroadcastReceiver : BroadcastReceiver() {
                     flowManager.handleTrigger(TriggerType.INCOMING_CALL, mapOf("number" to (incomingNumber ?: "")))
                 }
             }
+            android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED -> {
+                Log.d("FlowReceiver", "Bluetooth connected")
+                flowManager.handleTrigger(TriggerType.BLUETOOTH_CONNECT)
+            }
+            android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
+                Log.d("FlowReceiver", "Bluetooth disconnected")
+                flowManager.handleTrigger(TriggerType.BLUETOOTH_DISCONNECT)
+            }
             WifiManager.NETWORK_STATE_CHANGED_ACTION -> {
                 val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
                 if (info?.isConnected == true) {
