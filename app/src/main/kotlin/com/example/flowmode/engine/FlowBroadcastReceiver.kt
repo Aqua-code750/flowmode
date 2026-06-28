@@ -3,6 +3,7 @@ package com.example.flowmode.engine
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.NetworkInfo
 import android.net.wifi.WifiManager
 import android.util.Log
@@ -37,11 +38,13 @@ class FlowBroadcastReceiver : BroadcastReceiver() {
             }
             Intent.ACTION_BATTERY_LOW -> {
                 Log.d("FlowReceiver", "Battery low")
-                flowManager.handleTrigger(TriggerType.BATTERY_LOW, mapOf("level" to 15))
+                val level = getBatteryLevel(context)
+                flowManager.handleTrigger(TriggerType.BATTERY_LOW, mapOf("level" to level))
             }
             Intent.ACTION_BATTERY_OKAY -> {
                 Log.d("FlowReceiver", "Battery full/okay")
-                flowManager.handleTrigger(TriggerType.BATTERY_FULL, mapOf("level" to 100))
+                val level = getBatteryLevel(context)
+                flowManager.handleTrigger(TriggerType.BATTERY_FULL, mapOf("level" to level))
             }
             Intent.ACTION_SCREEN_OFF -> {
                 Log.d("FlowReceiver", "Screen off")
@@ -97,5 +100,14 @@ class FlowBroadcastReceiver : BroadcastReceiver() {
                 }
             }
         }
+    }
+
+    private fun getBatteryLevel(context: Context): Int {
+        val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { filter ->
+            context.registerReceiver(null, filter)
+        }
+        val level: Int = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale: Int = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+        return (level * 100 / scale.toFloat()).toInt()
     }
 }

@@ -4,9 +4,13 @@ import android.content.Context
 import android.util.Log
 import com.example.flowmode.data.model.*
 import com.example.flowmode.data.repository.FlowRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class FlowManager(private val context: Context) {
     private val repository = FlowRepository.getInstance(context)
+    private val scope = CoroutineScope(Dispatchers.Default)
 
     fun handleTrigger(triggerType: TriggerType, data: Map<String, Any> = emptyMap()) {
         Log.d("FlowManager", "Trigger fired: $triggerType with data $data")
@@ -24,12 +28,16 @@ class FlowManager(private val context: Context) {
             TriggerType.WIFI_CONNECT -> {
                 val targetSsid = trigger.config["ssid"] as? String
                 val actualSsid = data["ssid"] as? String
-                targetSsid == null || actualSsid?.contains(targetSsid) == true
+                targetSsid == null || targetSsid.isBlank() || actualSsid?.contains(targetSsid, ignoreCase = true) == true
             }
             TriggerType.BATTERY_LOW -> {
                 val threshold = (trigger.config["threshold"] as? Number)?.toInt() ?: 15
                 val currentLevel = data["level"] as? Int ?: 100
                 currentLevel <= threshold
+            }
+            TriggerType.BATTERY_FULL -> {
+                val currentLevel = data["level"] as? Int ?: 0
+                currentLevel >= 95
             }
             TriggerType.SMS_RECEIVED -> {
                 val targetSender = trigger.config["sender"] as? String
@@ -45,14 +53,16 @@ class FlowManager(private val context: Context) {
                 val actualNumber = data["number"] as? String
                 targetNumber == null || targetNumber.isBlank() || actualNumber?.contains(targetNumber) == true
             }
-            else -> true // TIME, PHONE_UNLOCK, etc. usually always true if fired
+            else -> true
         }
     }
 
     fun executeFlow(flow: Flow) {
-        Log.d("FlowManager", "Executing flow: ${flow.name}")
-        flow.actions.forEach { action ->
-            executeAction(action)
+        scope.launch {
+            Log.d("FlowManager", "Executing flow: ${flow.name}")
+            flow.actions.forEach { action ->
+                executeAction(action)
+            }
         }
     }
 
