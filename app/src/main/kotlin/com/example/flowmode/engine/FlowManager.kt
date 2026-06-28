@@ -6,7 +6,7 @@ import com.example.flowmode.data.model.*
 import com.example.flowmode.data.repository.FlowRepository
 
 class FlowManager(private val context: Context) {
-    private val repository = FlowRepository.getInstance()
+    private val repository = FlowRepository.getInstance(context)
 
     fun handleTrigger(triggerType: TriggerType, data: Map<String, Any> = emptyMap()) {
         Log.d("FlowManager", "Trigger fired: $triggerType with data $data")
@@ -28,8 +28,22 @@ class FlowManager(private val context: Context) {
             }
             TriggerType.BATTERY_LOW -> {
                 val threshold = (trigger.config["threshold"] as? Number)?.toInt() ?: 15
-                // In a real broadcast, we might get the level. If not, we assume it's low.
-                true 
+                val currentLevel = data["level"] as? Int ?: 100
+                currentLevel <= threshold
+            }
+            TriggerType.SMS_RECEIVED -> {
+                val targetSender = trigger.config["sender"] as? String
+                val targetText = trigger.config["text"] as? String
+                val actualSender = data["sender"] as? String
+                val actualText = data["text"] as? String
+                
+                (targetSender == null || targetSender.isBlank() || actualSender?.contains(targetSender, ignoreCase = true) == true) &&
+                (targetText == null || targetText.isBlank() || actualText?.contains(targetText, ignoreCase = true) == true)
+            }
+            TriggerType.INCOMING_CALL -> {
+                val targetNumber = trigger.config["number"] as? String
+                val actualNumber = data["number"] as? String
+                targetNumber == null || targetNumber.isBlank() || actualNumber?.contains(targetNumber) == true
             }
             else -> true // TIME, PHONE_UNLOCK, etc. usually always true if fired
         }

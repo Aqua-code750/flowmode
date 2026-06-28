@@ -11,7 +11,7 @@ import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class MarketplaceViewModel : ViewModel() {
+class MarketplaceViewModel(application: android.app.Application) : androidx.lifecycle.AndroidViewModel(application) {
     private val auth = Firebase.auth
     private val db = Firebase.firestore
     

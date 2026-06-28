@@ -8,7 +8,8 @@ import com.example.flowmode.data.model.*
 import com.example.flowmode.data.repository.FlowRepository
 import java.util.UUID
 
-class CanvasViewModel : ViewModel() {
+class CanvasViewModel(application: android.app.Application) : androidx.lifecycle.AndroidViewModel(application) {
+    private val repository = FlowRepository.getInstance(application)
     val nodes = mutableStateListOf<NodeUI>()
     val wires = mutableStateListOf<WireUI>()
     
@@ -121,6 +122,6 @@ class CanvasViewModel : ViewModel() {
             actions = actions,
             enabled = true
         )
-        FlowRepository.getInstance().addFlow(flow)
+        repository.addFlow(flow)
     }
 }

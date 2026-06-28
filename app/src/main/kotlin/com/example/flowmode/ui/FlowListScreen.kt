@@ -13,7 +13,8 @@ import com.example.flowmode.data.repository.FlowRepository
 
 @Composable
 fun FlowListScreen() {
-    val repository = FlowRepository.getInstance()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val repository = FlowRepository.getInstance(context)
     val flows by repository.flows.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {

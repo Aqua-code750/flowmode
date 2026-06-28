@@ -48,7 +48,7 @@ class FlowEngineService : Service(), SensorEventListener {
         
         // Ensure flows are loaded
         serviceScope.launch {
-            FlowRepository.getInstance().fetchFlows()
+            FlowRepository.getInstance(this@FlowEngineService).fetchFlows()
         }
     }
 

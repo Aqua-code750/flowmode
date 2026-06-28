@@ -18,7 +18,7 @@ class FlowBroadcastReceiver : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
                 Log.d("FlowReceiver", "Boot completed - Rescheduling alarms")
-                val repository = FlowRepository.getInstance()
+                val repository = FlowRepository.getInstance(context)
                 repository.getEnabledFlows()
                     .filter { it.trigger.type == TriggerType.TIME }
                     .forEach { scheduler.scheduleTimeTrigger(it) }
@@ -28,7 +28,7 @@ class FlowBroadcastReceiver : BroadcastReceiver() {
                 Log.d("FlowReceiver", "Time trigger for flow: $flowId")
                 flowManager.handleTrigger(TriggerType.TIME, mapOf("flowId" to (flowId ?: "")))
                 // Reschedule for next day if it's a recurring alarm
-                val flow = FlowRepository.getInstance().getEnabledFlows().find { it.id == flowId }
+                val flow = FlowRepository.getInstance(context).getEnabledFlows().find { it.id == flowId }
                 flow?.let { scheduler.scheduleTimeTrigger(it) }
             }
             Intent.ACTION_USER_PRESENT -> {
@@ -37,11 +37,11 @@ class FlowBroadcastReceiver : BroadcastReceiver() {
             }
             Intent.ACTION_BATTERY_LOW -> {
                 Log.d("FlowReceiver", "Battery low")
-                flowManager.handleTrigger(TriggerType.BATTERY_LOW)
+                flowManager.handleTrigger(TriggerType.BATTERY_LOW, mapOf("level" to 15))
             }
             Intent.ACTION_BATTERY_OKAY -> {
                 Log.d("FlowReceiver", "Battery full/okay")
-                flowManager.handleTrigger(TriggerType.BATTERY_FULL)
+                flowManager.handleTrigger(TriggerType.BATTERY_FULL, mapOf("level" to 100))
             }
             Intent.ACTION_SCREEN_OFF -> {
                 Log.d("FlowReceiver", "Screen off")
@@ -56,7 +56,17 @@ class FlowBroadcastReceiver : BroadcastReceiver() {
             }
             "android.provider.Telephony.SMS_RECEIVED" -> {
                 Log.d("FlowReceiver", "SMS Received")
-                flowManager.handleTrigger(TriggerType.SMS_RECEIVED)
+                val bundle = intent.extras
+                val pdus = bundle?.get("pdus") as? Array<*>
+                if (pdus != null) {
+                    val messages = pdus.map { 
+                        @Suppress("DEPRECATION")
+                        android.telephony.SmsMessage.createFromPdu(it as ByteArray) 
+                    }
+                    val sender = messages[0].displayOriginatingAddress
+                    val body = messages.joinToString("") { it.displayMessageBody }
+                    flowManager.handleTrigger(TriggerType.SMS_RECEIVED, mapOf("sender" to sender, "text" to body))
+                }
             }
             android.telephony.TelephonyManager.ACTION_PHONE_STATE_CHANGED -> {
                 val state = intent.getStringExtra(android.telephony.TelephonyManager.EXTRA_STATE)
