@@ -1,5 +1,6 @@
 package com.example.flowmode
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Window
 import androidx.activity.ComponentActivity
@@ -33,6 +34,10 @@ import com.example.flowmode.util.PermissionHandler
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Start the background engine service
+        val intent = Intent(this, com.example.flowmode.engine.FlowEngineService::class.java)
+        startService(intent)
         
         // Full screen edge-to-edge experience
         WindowCompat.setDecorFitsSystemWindows(window, false)
