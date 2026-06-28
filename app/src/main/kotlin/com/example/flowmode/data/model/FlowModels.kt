@@ -35,7 +35,9 @@ enum class TriggerType {
     SMS_RECEIVED,
     INCOMING_CALL,
     NFC_TAG,
-    SHAKE_DEVICE
+    SHAKE_DEVICE,
+    POWER_CONNECTED,
+    POWER_DISCONNECTED
 }
 
 enum class ActionType {

@@ -53,6 +53,7 @@ class FlowManager(private val context: Context) {
                 val actualNumber = data["number"] as? String
                 targetNumber == null || targetNumber.isBlank() || actualNumber?.contains(targetNumber) == true
             }
+            TriggerType.POWER_CONNECTED, TriggerType.POWER_DISCONNECTED -> true
             else -> true
         }
     }
