@@ -5,7 +5,8 @@ data class Flow(
     val name: String = "",
     val enabled: Boolean = true,
     val trigger: TriggerNode = TriggerNode(),
-    val actions: List<ActionNode> = emptyList()
+    val actions: List<ActionNode> = emptyList(),
+    val canvasData: String = "" // Added to store nodes/wires JSON
 )
 
 data class TriggerNode(

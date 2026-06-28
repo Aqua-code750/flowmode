@@ -29,16 +29,27 @@ fun FlowListScreen() {
             items(flows) { flow ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(flow.name, style = MaterialTheme.typography.titleMedium)
                             Text("${flow.actions.size} actions", style = MaterialTheme.typography.bodySmall)
                         }
-                        Switch(checked = flow.enabled, onCheckedChange = { 
-                            repository.updateFlow(flow.copy(enabled = it))
-                        })
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Switch(checked = flow.enabled, onCheckedChange = { 
+                                repository.updateFlow(flow.copy(enabled = it))
+                            })
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(onClick = {
+                                // Logic to open in editor would go here
+                            }) {
+                                Text("Edit")
+                            }
+                        }
                     }
                 }
             }

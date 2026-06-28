@@ -6,15 +6,33 @@ import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import com.example.flowmode.data.model.*
 import com.example.flowmode.data.repository.FlowRepository
+import com.google.gson.Gson
 import java.util.UUID
 
 class CanvasViewModel(application: android.app.Application) : androidx.lifecycle.AndroidViewModel(application) {
     private val repository = FlowRepository.getInstance(application)
+    private val gson = Gson()
+    
     val nodes = mutableStateListOf<NodeUI>()
     val wires = mutableStateListOf<WireUI>()
     
     val selectedNode = mutableStateOf<NodeUI?>(null)
     val connectionSource = mutableStateOf<String?>(null)
+
+    fun loadFlow(flowId: String) {
+        val flow = repository.flows.value.find { it.id == flowId } ?: return
+        if (flow.canvasData.isNotEmpty()) {
+            try {
+                val data = gson.fromJson(flow.canvasData, CanvasState::class.java)
+                nodes.clear()
+                nodes.addAll(data.nodes)
+                wires.clear()
+                wires.addAll(data.wires)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     fun addTrigger(type: TriggerType) {
         val id = UUID.randomUUID().toString()
@@ -116,12 +134,21 @@ class CanvasViewModel(application: android.app.Application) : androidx.lifecycle
             }
         }
 
+        val canvasState = CanvasState(nodes.toList(), wires.toList())
+        val canvasJson = gson.toJson(canvasState)
+
         val flow = Flow(
             name = name,
             trigger = triggerNodeUI.data as TriggerNode,
             actions = actions,
-            enabled = true
+            enabled = true,
+            canvasData = canvasJson
         )
         repository.addFlow(flow)
     }
 }
+
+data class CanvasState(
+    val nodes: List<NodeUI>,
+    val wires: List<WireUI>
+)

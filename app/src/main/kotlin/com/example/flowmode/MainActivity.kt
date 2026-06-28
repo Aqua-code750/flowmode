@@ -81,12 +81,16 @@ fun MainApp() {
                         selected = currentRoute == Screen.FlowList.route,
                         onClick = { navController.navigate(Screen.FlowList.route) }
                     )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                        label = { Text("Editor") },
-                        selected = currentRoute == Screen.FlowEditor.route,
-                        onClick = { navController.navigate(Screen.FlowEditor.route) }
-                    )
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                            label = { Text("Editor") },
+                            selected = currentRoute == Screen.FlowEditor.route,
+                            onClick = { 
+                                canvasViewModel.nodes.clear()
+                                canvasViewModel.wires.clear()
+                                navController.navigate(Screen.FlowEditor.route) 
+                            }
+                        )
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Shop, contentDescription = null) },
                         label = { Text("Market") },
