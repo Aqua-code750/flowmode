@@ -11,51 +11,59 @@ import com.example.flowmode.data.repository.FlowRepository
 class FlowBroadcastReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val flowManager = FlowManager(context)
-        val scheduler = FlowScheduler(context)
+        val action = intent.action ?: return
+        Log.d("FlowReceiver", "System Event: $action")
         
-        when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED -> {
-                Log.d("FlowReceiver", "Boot completed - Rescheduling alarms")
-                val intentService = Intent(context, FlowEngineService::class.java)
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    context.startForegroundService(intentService)
-                } else {
-                    context.startService(intentService)
-                }
-                
-                val repository = FlowRepository.getInstance(context)
-                repository.getEnabledFlows()
-                    .filter { it.trigger.type == TriggerType.TIME }
-                    .forEach { scheduler.scheduleTimeTrigger(it) }
-            }
-            "com.example.flowmode.ACTION_TIME_TRIGGER" -> {
-                val flowId = intent.getStringExtra("flowId")
-                flowManager.handleTrigger(TriggerType.TIME, mapOf("flowId" to (flowId ?: "")))
-                val flow = FlowRepository.getInstance(context).getEnabledFlows().find { it.id == flowId }
-                flow?.let { scheduler.scheduleTimeTrigger(it) }
-            }
-            "android.provider.Telephony.SMS_RECEIVED" -> {
-                Log.d("FlowReceiver", "SMS Received")
+        val flowManager = FlowManager(context)
+        
+        // Match system actions to FlowMode triggers
+        val triggerType = when (action) {
+            Intent.ACTION_USER_PRESENT -> TriggerType.PHONE_UNLOCK
+            Intent.ACTION_SCREEN_OFF -> TriggerType.SCREEN_OFF
+            Intent.ACTION_POWER_CONNECTED -> TriggerType.POWER_CONNECTED
+            Intent.ACTION_POWER_DISCONNECTED -> TriggerType.POWER_DISCONNECTED
+            Intent.ACTION_BATTERY_LOW -> TriggerType.BATTERY_LOW
+            Intent.ACTION_BATTERY_OKAY -> TriggerType.BATTERY_FULL
+            "android.provider.Telephony.SMS_RECEIVED" -> TriggerType.SMS_RECEIVED
+            "android.intent.action.PHONE_STATE" -> TriggerType.INCOMING_CALL
+            else -> null
+        }
+
+        if (triggerType != null) {
+            val data = mutableMapOf<String, Any>()
+            
+            // Extract extra data for specific triggers
+            if (action == "android.provider.Telephony.SMS_RECEIVED") {
                 val bundle = intent.extras
                 val pdus = bundle?.get("pdus") as? Array<*>
-                if (pdus != null) {
-                    val messages = pdus.map { 
+                pdus?.let {
+                    val messages = it.map { pdu -> 
                         @Suppress("DEPRECATION")
-                        android.telephony.SmsMessage.createFromPdu(it as ByteArray) 
+                        android.telephony.SmsMessage.createFromPdu(pdu as ByteArray) 
                     }
-                    val sender = messages[0].displayOriginatingAddress
-                    val body = messages.joinToString("") { it.displayMessageBody }
-                    flowManager.handleTrigger(TriggerType.SMS_RECEIVED, mapOf("sender" to sender, "text" to body))
+                    data["sender"] = messages[0].displayOriginatingAddress ?: ""
+                    data["text"] = messages.joinToString("") { m -> it.toString() }
                 }
-            }
-            android.telephony.TelephonyManager.ACTION_PHONE_STATE_CHANGED -> {
+            } else if (action == "android.intent.action.PHONE_STATE") {
                 val state = intent.getStringExtra(android.telephony.TelephonyManager.EXTRA_STATE)
                 if (state == android.telephony.TelephonyManager.EXTRA_STATE_RINGING) {
-                    val incomingNumber = intent.getStringExtra(android.telephony.TelephonyManager.EXTRA_INCOMING_NUMBER)
-                    flowManager.handleTrigger(TriggerType.INCOMING_CALL, mapOf("number" to (incomingNumber ?: "")))
+                    data["number"] = intent.getStringExtra(android.telephony.TelephonyManager.EXTRA_INCOMING_NUMBER) ?: ""
+                } else {
+                    return // Ignore non-ringing states
                 }
             }
+            
+            // Fire automation instantly
+            flowManager.handleTrigger(triggerType, data)
+        }
+        
+        // Ensure engine service is alive for sensor-based triggers (Shake, etc)
+        val serviceIntent = Intent(context, FlowEngineService::class.java)
+        try {
+            context.startService(serviceIntent)
+        } catch (e: Exception) {
+            // Foreground start might fail on newer Android if app is in background, 
+            // but the BroadcastReceiver handles the critical ones anyway.
         }
     }
 }

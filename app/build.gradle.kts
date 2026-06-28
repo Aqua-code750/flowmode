@@ -18,8 +18,8 @@ android {
         applicationId = "com.example.flowmode"
         minSdk = 23
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.2.7"
+        versionCode = 9
+        versionName = "1.2.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

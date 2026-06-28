@@ -20,6 +20,7 @@ object PermissionHandler {
         permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
         permissions.add(Manifest.permission.RECEIVE_SMS)
         permissions.add(Manifest.permission.READ_PHONE_STATE)
+        permissions.add(Manifest.permission.READ_CONTACTS) // To identify callers/senders
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissions.add(Manifest.permission.BLUETOOTH_SCAN)
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
@@ -37,6 +38,7 @@ object PermissionHandler {
         permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
         permissions.add(Manifest.permission.RECEIVE_SMS)
         permissions.add(Manifest.permission.READ_PHONE_STATE)
+        permissions.add(Manifest.permission.READ_CONTACTS)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissions.add(Manifest.permission.BLUETOOTH_SCAN)
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)

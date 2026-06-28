@@ -35,9 +35,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Start the background engine service
+        // Start the background engine service properly for real-time response
         val intent = Intent(this, com.example.flowmode.engine.FlowEngineService::class.java)
-        startService(intent)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
         
         // Full screen edge-to-edge experience
         WindowCompat.setDecorFitsSystemWindows(window, false)

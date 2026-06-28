@@ -37,41 +37,18 @@ class FlowEngineService : Service(), SensorEventListener {
 
     private val dynamicReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                Intent.ACTION_USER_PRESENT -> {
-                    Log.d("FlowEngine", "Phone unlocked")
-                    flowManager.handleTrigger(TriggerType.PHONE_UNLOCK)
-                }
-                Intent.ACTION_SCREEN_OFF -> {
-                    Log.d("FlowEngine", "Screen off")
-                    flowManager.handleTrigger(TriggerType.SCREEN_OFF)
-                }
-                Intent.ACTION_BATTERY_LOW -> {
-                    Log.d("FlowEngine", "Battery low")
-                    flowManager.handleTrigger(TriggerType.BATTERY_LOW, mapOf("level" to 15))
-                }
-                Intent.ACTION_BATTERY_OKAY -> {
-                    Log.d("FlowEngine", "Battery full")
-                    flowManager.handleTrigger(TriggerType.BATTERY_FULL, mapOf("level" to 100))
-                }
-                Intent.ACTION_POWER_CONNECTED -> {
-                    Log.d("FlowEngine", "Power connected")
-                    flowManager.handleTrigger(TriggerType.POWER_CONNECTED)
-                }
-                Intent.ACTION_POWER_DISCONNECTED -> {
-                    Log.d("FlowEngine", "Power disconnected")
-                    flowManager.handleTrigger(TriggerType.POWER_DISCONNECTED)
-                }
+            val action = intent.action ?: return
+            Log.d("FlowEngine", "Engine Detected Signal: $action")
+            
+            when (action) {
+                Intent.ACTION_SCREEN_OFF -> flowManager.handleTrigger(TriggerType.SCREEN_OFF)
+                Intent.ACTION_SCREEN_ON -> Log.d("FlowEngine", "Screen Turned On")
                 Intent.ACTION_HEADSET_PLUG -> {
                     val state = intent.getIntExtra("state", -1)
                     if (state == 1) flowManager.handleTrigger(TriggerType.HEADPHONES_PLUGGED)
                 }
-                android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                    flowManager.handleTrigger(TriggerType.BLUETOOTH_CONNECT)
-                }
-                android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                    flowManager.handleTrigger(TriggerType.BLUETOOTH_DISCONNECT)
-                }
+                android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED -> flowManager.handleTrigger(TriggerType.BLUETOOTH_CONNECT)
+                android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED -> flowManager.handleTrigger(TriggerType.BLUETOOTH_DISCONNECT)
                 WifiManager.NETWORK_STATE_CHANGED_ACTION -> {
                     val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
                     if (info?.isConnected == true) {
@@ -105,14 +82,10 @@ class FlowEngineService : Service(), SensorEventListener {
         currentAcceleration = SensorManager.GRAVITY_EARTH
         lastAcceleration = SensorManager.GRAVITY_EARTH
         
-        // Register Dynamic Broadcasts
+        // Register Dynamic Broadcasts (Those that CANNOT be in Manifest)
         val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_USER_PRESENT)
             addAction(Intent.ACTION_SCREEN_OFF)
-            addAction(Intent.ACTION_BATTERY_LOW)
-            addAction(Intent.ACTION_BATTERY_OKAY)
-            addAction(Intent.ACTION_POWER_CONNECTED)
-            addAction(Intent.ACTION_POWER_DISCONNECTED)
+            addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_HEADSET_PLUG)
             addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED)
@@ -127,7 +100,7 @@ class FlowEngineService : Service(), SensorEventListener {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "FlowMode Engine", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(CHANNEL_ID, "FlowMode Masterpiece", NotificationManager.IMPORTANCE_LOW)
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
@@ -136,7 +109,7 @@ class FlowEngineService : Service(), SensorEventListener {
     private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("FlowMode Masterpiece")
-            .setContentText("Real-time automation engine active")
+            .setContentText("Listening for real-time user actions...")
             .setSmallIcon(android.R.drawable.ic_lock_idle_low_battery)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
@@ -152,6 +125,7 @@ class FlowEngineService : Service(), SensorEventListener {
         val delta = currentAcceleration - lastAcceleration
         acceleration = acceleration * 0.9f + delta
         if (acceleration > 10) {
+            Log.d("FlowEngine", "Shake detected!")
             flowManager.handleTrigger(TriggerType.SHAKE_DEVICE)
             acceleration = 0f
         }
