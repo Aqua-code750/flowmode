@@ -22,11 +22,11 @@ class FlowManager(private val context: Context) {
 
     fun handleTrigger(triggerType: TriggerType, data: Map<String, Any> = emptyMap()) {
         val enabledFlows = repository.getEnabledFlows()
-        Log.d("FlowManager", "Trigger detected: $triggerType. Checking ${enabledFlows.size} active flows.")
+        Log.d("FlowManager", "Detected $triggerType. Checking ${enabledFlows.size} active flows.")
 
         enabledFlows.filter { it.trigger.type == triggerType }.forEach { flow ->
             if (isTriggerConditionMet(flow.trigger, data)) {
-                Log.d("FlowManager", "Match found! Executing Flow: ${flow.name}")
+                Log.d("FlowManager", "Trigger MATCH! Starting '${flow.name}'")
                 executeFlow(flow)
             }
         }
@@ -44,32 +44,22 @@ class FlowManager(private val context: Context) {
                 val currentLevel = data["level"] as? Int ?: 100
                 currentLevel <= threshold
             }
-            TriggerType.BATTERY_FULL -> {
-                val currentLevel = data["level"] as? Int ?: 0
-                currentLevel >= 95
-            }
             TriggerType.SMS_RECEIVED -> {
                 val targetSender = trigger.config["sender"] as? String
-                val targetText = trigger.config["text"] as? String
                 val actualSender = data["sender"] as? String
-                val actualText = data["text"] as? String
-
-                (targetSender == null || targetSender.isBlank() || actualSender?.contains(targetSender, ignoreCase = true) == true) &&
-                        (targetText == null || targetText.isBlank() || actualText?.contains(targetText, ignoreCase = true) == true)
+                targetSender == null || targetSender.isBlank() || actualSender?.contains(targetSender, ignoreCase = true) == true
             }
             TriggerType.INCOMING_CALL -> {
                 val targetNumber = trigger.config["number"] as? String
                 val actualNumber = data["number"] as? String
                 targetNumber == null || targetNumber.isBlank() || actualNumber?.contains(targetNumber) == true
             }
-            TriggerType.POWER_CONNECTED, TriggerType.POWER_DISCONNECTED -> true
-            TriggerType.PHONE_UNLOCK, TriggerType.SCREEN_OFF, TriggerType.SHAKE_DEVICE, TriggerType.NFC_TAG -> true
-            else -> true
+            else -> true // SHAKE, UNLOCK, SCREEN_OFF, POWER, NFC are event-based
         }
     }
 
     fun executeFlow(flow: Flow) {
-        showRunningNotification(flow.name)
+        showStatusNotification(flow.name)
         scope.launch {
             flow.actions.forEach { action ->
                 executeAction(action)
@@ -77,20 +67,21 @@ class FlowManager(private val context: Context) {
         }
     }
 
-    private fun showRunningNotification(flowName: String) {
+    private fun showStatusNotification(flowName: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(RUNNING_CHANNEL_ID, "Automation Running", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(RUNNING_CHANNEL_ID, "Automation Status", NotificationManager.IMPORTANCE_HIGH)
             notificationManager.createNotificationChannel(channel)
         }
 
         val notification = NotificationCompat.Builder(context, RUNNING_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("FlowMode")
-            .setContentText("Your automation '$flowName' is running...")
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentTitle("FlowMode Masterpiece")
+            .setContentText("Your automation should start running: $flowName")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
-            .setTimeoutAfter(3000)
+            .setTimeoutAfter(5000)
             .build()
 
         notificationManager.notify(flowName.hashCode(), notification)
@@ -114,7 +105,7 @@ class FlowManager(private val context: Context) {
             ActionType.WAIT_DELAY -> FlowActions.waitDelay(action.config)
             ActionType.HTTP_REQUEST -> FlowActions.makeHttpRequest(action.config)
             ActionType.SCREENSHOT -> FlowActions.takeScreenshot(context)
-            else -> Log.w("FlowManager", "Action type ${action.type} not yet implemented")
+            else -> {}
         }
     }
 }
