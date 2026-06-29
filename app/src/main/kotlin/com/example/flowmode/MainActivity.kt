@@ -1,6 +1,8 @@
 package com.example.flowmode
 
 import android.content.Intent
+import android.nfc.NfcAdapter
+import android.nfc.Tag
 import android.os.Bundle
 import android.view.Window
 import androidx.activity.ComponentActivity
@@ -54,6 +56,29 @@ class MainActivity : ComponentActivity() {
         setContent {
             FlowModeTheme {
                 MainApp()
+            }
+        }
+
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+        if (NfcAdapter.ACTION_TAG_DISCOVERED == intent.action ||
+            NfcAdapter.ACTION_TECH_DISCOVERED == intent.action ||
+            NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action) {
+            val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
+            tag?.let {
+                val tagId = it.id.joinToString("") { byte -> "%02x".format(byte) }
+                com.example.flowmode.engine.FlowManager(this).handleTrigger(
+                    com.example.flowmode.data.model.TriggerType.NFC_TAG,
+                    mapOf("tagId" to tagId)
+                )
             }
         }
     }

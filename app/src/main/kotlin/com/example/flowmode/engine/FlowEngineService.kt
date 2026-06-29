@@ -31,7 +31,7 @@ class FlowEngineService : Service(), SensorEventListener {
     private var acceleration = 0f
     private var currentAcceleration = 0f
     private var lastAcceleration = 0f
-    
+
     private val serviceScope = CoroutineScope(Dispatchers.Main)
     private lateinit var flowManager: FlowManager
 
@@ -39,10 +39,12 @@ class FlowEngineService : Service(), SensorEventListener {
         override fun onReceive(context: Context, intent: Intent) {
             val action = intent.action ?: return
             Log.d("FlowEngine", "Engine Detected Signal: $action")
-            
+
             when (action) {
                 Intent.ACTION_SCREEN_OFF -> flowManager.handleTrigger(TriggerType.SCREEN_OFF)
-                Intent.ACTION_SCREEN_ON -> Log.d("FlowEngine", "Screen Turned On")
+                Intent.ACTION_USER_PRESENT -> flowManager.handleTrigger(TriggerType.PHONE_UNLOCK)
+                Intent.ACTION_POWER_CONNECTED -> flowManager.handleTrigger(TriggerType.POWER_CONNECTED)
+                Intent.ACTION_POWER_DISCONNECTED -> flowManager.handleTrigger(TriggerType.POWER_DISCONNECTED)
                 Intent.ACTION_HEADSET_PLUG -> {
                     val state = intent.getIntExtra("state", -1)
                     if (state == 1) flowManager.handleTrigger(TriggerType.HEADPHONES_PLUGGED)
@@ -73,26 +75,30 @@ class FlowEngineService : Service(), SensorEventListener {
         flowManager = FlowManager(this)
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
-        
+
         // Sensor setup
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI)
-        
+        if (accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI)
+        }
+
         currentAcceleration = SensorManager.GRAVITY_EARTH
         lastAcceleration = SensorManager.GRAVITY_EARTH
-        
-        // Register Dynamic Broadcasts (Those that CANNOT be in Manifest)
+
+        // Register Dynamic Broadcasts
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
-            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+            addAction(Intent.ACTION_POWER_CONNECTED)
+            addAction(Intent.ACTION_POWER_DISCONNECTED)
             addAction(Intent.ACTION_HEADSET_PLUG)
             addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED)
             addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
         }
         registerReceiver(dynamicReceiver, filter)
-        
+
         serviceScope.launch {
             FlowRepository.getInstance(this@FlowEngineService).fetchFlows()
         }
