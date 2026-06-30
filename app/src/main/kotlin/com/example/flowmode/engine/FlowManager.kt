@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 class FlowManager(private val context: Context) {
     private val repository = FlowRepository.getInstance(context)
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val scope = CoroutineScope(Dispatchers.Main) // Switched to Main for immediate action UI/TTS startup
 
     companion object {
         private const val RUNNING_CHANNEL_ID = "flow_running_notifications"
@@ -59,9 +59,13 @@ class FlowManager(private val context: Context) {
     }
 
     fun executeFlow(flow: Flow) {
+        // Run notification and actions simultaneously
         showStatusNotification(flow.name)
+        
+        // Execute actions immediately on Main scope to ensure TTS and App Launches work 100%
         scope.launch {
             flow.actions.forEach { action ->
+                Log.d("FlowManager", "Executing Action: ${action.type}")
                 executeAction(action)
             }
         }
@@ -77,35 +81,38 @@ class FlowManager(private val context: Context) {
         val notification = NotificationCompat.Builder(context, RUNNING_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("FlowMode Masterpiece")
-            .setContentText("Your automation should start running: $flowName")
+            .setContentText("Your automation is running: $flowName")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setAutoCancel(true)
-            .setTimeoutAfter(5000)
+            .setTimeoutAfter(3000)
             .build()
 
         notificationManager.notify(flowName.hashCode(), notification)
     }
 
     fun executeAction(action: ActionNode) {
-        Log.d("FlowManager", "Running Action: ${action.type}")
-        when (action.type) {
-            ActionType.NOTIFICATION -> FlowActions.showNotification(context, action.config)
-            ActionType.TOGGLE_DND -> FlowActions.toggleDnd(context, action.config)
-            ActionType.TOGGLE_WIFI -> FlowActions.toggleWifi(context, action.config)
-            ActionType.SET_BRIGHTNESS -> FlowActions.setBrightness(context, action.config)
-            ActionType.TOGGLE_FLASHLIGHT -> FlowActions.toggleFlashlight(context, action.config)
-            ActionType.OPEN_APP -> FlowActions.openApp(context, action.config)
-            ActionType.LOG_EVENT -> FlowActions.logEvent(action.config)
-            ActionType.PLAY_SOUND -> FlowActions.playSound(context)
-            ActionType.VIBRATE -> FlowActions.vibrate(context, action.config)
-            ActionType.SPEAK_TEXT -> FlowActions.speakText(context, action.config)
-            ActionType.TOGGLE_BLUETOOTH -> FlowActions.toggleBluetooth(context, action.config)
-            ActionType.SEND_SMS -> FlowActions.sendSms(action.config)
-            ActionType.WAIT_DELAY -> FlowActions.waitDelay(action.config)
-            ActionType.HTTP_REQUEST -> FlowActions.makeHttpRequest(action.config)
-            ActionType.SCREENSHOT -> FlowActions.takeScreenshot(context)
-            else -> {}
+        try {
+            when (action.type) {
+                ActionType.NOTIFICATION -> FlowActions.showNotification(context, action.config)
+                ActionType.TOGGLE_DND -> FlowActions.toggleDnd(context, action.config)
+                ActionType.TOGGLE_WIFI -> FlowActions.toggleWifi(context, action.config)
+                ActionType.SET_BRIGHTNESS -> FlowActions.setBrightness(context, action.config)
+                ActionType.TOGGLE_FLASHLIGHT -> FlowActions.toggleFlashlight(context, action.config)
+                ActionType.OPEN_APP -> FlowActions.openApp(context, action.config)
+                ActionType.LOG_EVENT -> FlowActions.logEvent(action.config)
+                ActionType.PLAY_SOUND -> FlowActions.playSound(context)
+                ActionType.VIBRATE -> FlowActions.vibrate(context, action.config)
+                ActionType.SPEAK_TEXT -> FlowActions.speakText(context, action.config)
+                ActionType.TOGGLE_BLUETOOTH -> FlowActions.toggleBluetooth(context, action.config)
+                ActionType.SEND_SMS -> FlowActions.sendSms(context, action.config)
+                ActionType.WAIT_DELAY -> FlowActions.waitDelay(action.config)
+                ActionType.HTTP_REQUEST -> FlowActions.makeHttpRequest(action.config)
+                ActionType.SCREENSHOT -> FlowActions.takeScreenshot(context)
+                else -> {}
+            }
+        } catch (e: Exception) {
+            Log.e("FlowManager", "Action failed: ${action.type}", e)
         }
     }
 }

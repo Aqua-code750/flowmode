@@ -25,17 +25,6 @@ import android.bluetooth.BluetoothManager
 import android.telephony.SmsManager
 import java.net.HttpURLConnection
 import java.net.URL
-import android.graphics.Bitmap
-import android.os.Environment
-import android.view.View
-import android.app.Activity
-import java.io.FileOutputStream
-import java.io.File
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
-import com.example.flowmode.engine.FlowWorker
-import java.util.concurrent.TimeUnit
 
 object FlowActions {
 
@@ -112,11 +101,12 @@ object FlowActions {
 
     fun openApp(context: Context, config: Map<String, Any>) {
         val packageName = config["packageName"] as? String ?: return
+        Log.d("FlowActions", "Opening app: $packageName")
         val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
         launchIntent?.let {
             it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(it)
-        }
+        } ?: Log.e("FlowActions", "App not found: $packageName")
     }
 
     fun logEvent(config: Map<String, Any>) {
@@ -155,7 +145,7 @@ object FlowActions {
     fun speakText(context: Context, config: Map<String, Any>) {
         val text = config["text"] as? String ?: "Hello from FlowMode"
         if (tts == null) {
-            tts = TextToSpeech(context) { status ->
+            tts = TextToSpeech(context.applicationContext) { status ->
                 if (status == TextToSpeech.SUCCESS) {
                     tts?.language = Locale.US
                     tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
@@ -179,17 +169,18 @@ object FlowActions {
         }
     }
 
-    fun sendSms(config: Map<String, Any>) {
+    fun sendSms(context: Context, config: Map<String, Any>) {
         val phoneNumber = config["phoneNumber"] as? String ?: return
         val message = config["message"] as? String ?: return
         try {
-            val smsManager: SmsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                SmsManager.getSmsManagerForSubscriptionId(SmsManager.getDefaultSmsSubscriptionId())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val smsManager = context.getSystemService(SmsManager::class.java)
+                smsManager?.sendTextMessage(phoneNumber, null, message, null, null)
             } else {
                 @Suppress("DEPRECATION")
-                SmsManager.getDefault()
+                val smsManager = SmsManager.getDefault()
+                smsManager.sendTextMessage(phoneNumber, null, message, null, null)
             }
-            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -222,8 +213,6 @@ object FlowActions {
     }
 
     fun takeScreenshot(context: Context) {
-        // Note: Real screenshots usually require MediaProjection or root on Android.
-        // This is a simplified "log" version for the automation flow.
         Log.i("FlowActions", "Screenshot action triggered (Requires System Permissions)")
     }
 }
